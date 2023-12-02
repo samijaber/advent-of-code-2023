@@ -10,28 +10,29 @@ pub fn main() {
         let game_index = game_line[0].split_whitespace().collect::<Vec<_>>()[1];
         let game = game_line[1];
 
-        let is_possible = game.split(';').all(|round| {
-            round.trim().split(',').all(|x| {
+        let mut max_blue = 0;
+        let mut max_red = 0;
+        let mut max_green = 0;
+
+        game.split(';').for_each(|round| {
+            round.trim().split(',').for_each(|x| {
                 let xk = x.trim().split(' ').collect::<Vec<_>>();
-                let max = if xk[1] == "red" {
-                    MAXES.red
+                let val = xk[0].parse::<u32>().unwrap();
+                if xk[1] == "red" {
+                    max_red = max_red.max(val)
                 } else if xk[1] == "green" {
-                    MAXES.green
+                    max_green = max_green.max(val)
                 } else {
-                    MAXES.blue
+                    max_blue = max_blue.max(val)
                 };
-                return max >= xk[0].parse::<i32>().unwrap();
             })
         });
 
-        if is_possible {
-            total += game_index.parse::<i32>().unwrap();
-        }
-        println!("#{} is possible: {}", game_index, is_possible);
+        let power = max_red * max_green * max_blue;
 
-        // println!("\tRound: {} is possible: {}", is_possible)
-        // for round in game.split(';') {
-        // }
+        println!("{}: {}", game_index, power);
+
+        total += power;
     }
     println!("total: {}", total);
 }
