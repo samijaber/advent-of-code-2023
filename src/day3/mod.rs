@@ -70,23 +70,49 @@ pub fn main() {
     // }
 
     let used_numbers = numbers.iter().filter(|number| {
-        return symbols.clone().any(|symbol| {
-            let x_start = if number.x_start == 0 {
-                0
-            } else {
-                number.x_start - 1
-            };
-            let y_start = if number.y == 0 { 0 } else { number.y - 1 };
-
-            let cond = symbol.x >= x_start
-                && symbol.x <= number.x_end + 1
-                && symbol.y <= number.y + 1
-                && symbol.y >= y_start;
-
-            return cond;
-        });
+        return symbols
+            .clone()
+            .any(|symbol| num_touches_symbol(number, &symbol));
     });
 
     let total: i32 = used_numbers.map(|k| k.value.parse::<i32>().unwrap()).sum();
     println!("total: {}", total);
+
+    let gear_sums: i32 = symbols
+        .filter_map(|s| {
+            if (s.c != '*') {
+                return None;
+            } else {
+                let filter_map =
+                    numbers
+                        .iter()
+                        .filter_map(|number| match num_touches_symbol(number, &s) {
+                            true => Some(number.value.parse::<i32>().unwrap()),
+                            false => None,
+                        });
+
+                if filter_map.clone().count() == 2 {
+                    Some(filter_map.reduce(|a, b| a * b).unwrap())
+                } else {
+                    None
+                }
+            }
+        })
+        .sum();
+
+    println!("gear sums: {:?}", gear_sums);
+}
+
+fn num_touches_symbol(number: &Number, symbol: &Coord) -> bool {
+    let x_start = if number.x_start == 0 {
+        0
+    } else {
+        number.x_start - 1
+    };
+    let y_start = if number.y == 0 { 0 } else { number.y - 1 };
+    let cond = symbol.x >= x_start
+        && symbol.x <= number.x_end + 1
+        && symbol.y <= number.y + 1
+        && symbol.y >= y_start;
+    return cond;
 }
