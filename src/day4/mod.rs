@@ -1,32 +1,18 @@
 pub mod data;
 
 fn get_card_matches(card: &str) -> usize {
-    let mut cards = card
-        .split(':')
-        .nth(1)
-        .unwrap()
-        .trim()
-        .split('|')
-        .map(|x: &str| {
-            x.trim()
-                .split(' ')
-                .filter_map(|x: &str| x.trim().parse::<i32>().ok())
-        });
+    let (winner, owned) = card.split_once(':').unwrap().1.split_once('|').unwrap();
 
-    let mut winner = cards.next().unwrap();
-
-    return cards
-        .next()
-        .unwrap()
-        .filter(|x| winner.find(|y| x == y).is_some())
+    let winner = winner.split_whitespace().collect::<Vec<_>>();
+    return owned
+        .split_whitespace()
+        .filter(|x| winner.contains(x))
         .count();
 }
 
-pub fn part1() {
-    let data_set = data::PRACTICE_STRING_1;
-    let lines = data_set.lines();
-
-    let total: i32 = lines
+pub fn part1() -> i32 {
+    return data::PRACTICE_STRING_1
+        .lines()
         .map(|line| {
             vec![0 as usize; get_card_matches(line)]
                 .iter()
@@ -36,16 +22,11 @@ pub fn part1() {
                 })
         })
         .sum();
-
-    println!("total: {}", total)
 }
 
-pub fn part2() {
-    let data_set = data::REAL_DATA;
-    let cards = data_set.lines();
-
-    let matches = cards
-        .clone()
+pub fn part2() -> usize {
+    let matches = data::REAL_DATA
+        .lines()
         .map(|x| get_card_matches(x))
         .collect::<Vec<_>>();
 
@@ -69,11 +50,9 @@ pub fn part2() {
         };
     }
 
-    let final_sum = recursinator(0, 0, vec![0 as usize; cards.count()], matches.clone());
-
-    println!("final sum: {}", final_sum);
+    return recursinator(0, 0, vec![0 as usize; matches.len()], matches.clone());
 }
 
 pub fn main() {
-    part2();
+    let total_2 = part2();
 }
