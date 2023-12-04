@@ -27,25 +27,29 @@ pub fn part1() -> i32 {
 pub fn part2() -> usize {
     let matches = data::REAL_DATA
         .lines()
-        .map(|x| get_card_matches(x))
+        .map(get_card_matches)
         .collect::<Vec<_>>();
 
     fn recursinator(acc: usize, i: usize, data: Vec<usize>, matches: Vec<usize>) -> usize {
-        return match data.as_slice() {
-            [] => acc,
-            [head, tail @ ..] => {
+        return match data.len() {
+            0 => acc,
+            _ => {
                 let matches_for_card = matches[i];
-                let card_matches = head + 1;
+                let card_matches = data[0] + 1;
 
-                let upgraded_tail = tail
-                    .iter()
-                    .enumerate()
-                    .map(|(i, x)| match i {
-                        n if n < matches_for_card => x + card_matches,
-                        _ => *x,
-                    })
-                    .collect();
-                return recursinator(acc + card_matches, i + 1, upgraded_tail, matches);
+                return recursinator(
+                    acc + card_matches,
+                    i + 1,
+                    data[1..]
+                        .iter()
+                        .enumerate()
+                        .map(|(i, x)| match i {
+                            n if n < matches_for_card => x + card_matches,
+                            _ => *x,
+                        })
+                        .collect(),
+                    matches,
+                );
             }
         };
     }
@@ -55,4 +59,5 @@ pub fn part2() -> usize {
 
 pub fn main() {
     let total_2 = part2();
+    println!("Total 2: {}", total_2);
 }
