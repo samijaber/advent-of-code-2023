@@ -8,9 +8,40 @@ struct Map {
 
 type Maps = Vec<Vec<Map>>;
 
+type Seeds = Vec<i64>;
 struct State {
-    seeds: Vec<i64>,
+    seeds: Seeds,
     maps: Maps,
+}
+
+// fn collect_seeds_part_1(seed_line: &str) -> Seeds {
+//     seed_line
+//         .split_once(':')
+//         .unwrap()
+//         .1
+//         .split_whitespace()
+//         .map(|x| x.parse::<i64>().unwrap())
+//         .collect::<Vec<_>>()
+// }
+
+fn collect_seeds_part_2(seed_line: &str) -> Seeds {
+    seed_line
+        .split_once(':')
+        .unwrap()
+        .1
+        .split_whitespace()
+        .map(|x| x.parse::<i64>().unwrap())
+        .collect::<Vec<_>>()
+        .chunks(2)
+        .flat_map(|w| {
+            println!("generating seeds for: {} | {}", w[0], w[1]);
+            vec![0 as i64; w[1] as usize]
+                .iter()
+                .enumerate()
+                .map(|(i, _)| i as i64 + &w[0])
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>()
 }
 
 fn collect_state(data: String) -> State {
@@ -18,20 +49,8 @@ fn collect_state(data: String) -> State {
 
     let mut maps: Maps = vec![];
 
-    let seeds = lines
-        .next()
-        .unwrap()
-        .split_once(':')
-        .unwrap()
-        .1
-        .split_whitespace()
-        .map(|x| {
-            x.parse::<i64>().unwrap_or_else(|k| {
-                println!("fail to parse: {}", k);
-                0
-            })
-        })
-        .collect::<Vec<_>>();
+    println!("collecting seeds");
+    let seeds = collect_seeds_part_2(lines.next().unwrap());
 
     for line in lines {
         if line.contains("map") {
@@ -52,43 +71,24 @@ fn collect_state(data: String) -> State {
 }
 
 pub fn part1() -> i64 {
-    let practice_data = fs::read_to_string("src/day5/data.txt").expect("Unable to read file");
-    // println!("{}", practice_data);
+    let practice_data = fs::read_to_string("src/day5/example.txt").expect("Unable to read file");
 
     let state = collect_state(practice_data);
 
-    // for maps in &state.maps {
-    //     println!("another map");
-    //     for map in maps {
-    //         println!(
-    //             "Src: {} | Dest: {} | Len: {}",
-    //             map.src, map.dest, map.length
-    //         );
-    //     }
-    // }
-
     let k = state.seeds.iter().map(|seed| {
-        return state.maps.as_slice().iter().fold(*seed, |acc, maps| {
+        state.maps.as_slice().iter().fold(*seed, |acc, maps| {
             let found_map = maps
                 .iter()
                 .find(|m| acc >= m.src && acc <= (m.src + m.length));
 
             match found_map {
-                Some(map) => {
-                    let new_seed = (map.dest + (acc - &map.src));
-                    // println!("updating seed from {} to {}", acc, new_seed);
-                    return new_seed;
-                }
-                None => return acc,
+                Some(map) => map.dest + (acc - &map.src),
+                None => acc,
             }
-        });
+        })
     });
 
-    // for l in k {
-    //     println!("final: {}", l)
-    // }
-
-    return k.min().unwrap();
+    k.min().unwrap()
 }
 
 pub fn main() {
