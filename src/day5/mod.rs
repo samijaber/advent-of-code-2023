@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::fs;
 
 struct Map {
@@ -14,17 +15,7 @@ struct State {
     maps: Maps,
 }
 
-// fn collect_seeds_part_1(seed_line: &str) -> Seeds {
-//     seed_line
-//         .split_once(':')
-//         .unwrap()
-//         .1
-//         .split_whitespace()
-//         .map(|x| x.parse::<i64>().unwrap())
-//         .collect::<Vec<_>>()
-// }
-
-fn collect_seeds_part_2(seed_line: &str) -> Seeds {
+fn collect_seeds_part_1(seed_line: &str) -> Seeds {
     seed_line
         .split_once(':')
         .unwrap()
@@ -32,16 +23,29 @@ fn collect_seeds_part_2(seed_line: &str) -> Seeds {
         .split_whitespace()
         .map(|x| x.parse::<i64>().unwrap())
         .collect::<Vec<_>>()
-        .chunks(2)
-        .flat_map(|w| {
-            println!("generating seeds for: {} | {}", w[0], w[1]);
-            vec![0 as i64; w[1] as usize]
-                .iter()
-                .enumerate()
-                .map(|(i, _)| i as i64 + &w[0])
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>()
+}
+
+fn collect_seeds_part_2(seed_line: &str) -> Seeds {
+    let binding = seed_line
+        .split_once(':')
+        .unwrap()
+        .1
+        .split_whitespace()
+        .map(|x| x.parse().unwrap())
+        .collect_vec();
+
+    println!("binding: {:?}", binding);
+    let mut vec: Seeds = vec![];
+    binding.chunks(2).for_each(|w| {
+        println!("w: {:?}", w);
+        vec.append(&mut (w[0]..w[0] + w[1]).collect_vec())
+    });
+
+    println!("Seeds found: {:?}", vec.clone());
+
+    // vec.into_iter().unique().collect()
+
+    vec
 }
 
 fn collect_state(data: String) -> State {
@@ -52,6 +56,9 @@ fn collect_state(data: String) -> State {
     println!("collecting seeds");
     let seeds = collect_seeds_part_2(lines.next().unwrap());
 
+    // println!("total seeds: {}", seeds.len());
+    // seeds = seeds.iter().unique().collect_vec();
+    println!("unique seeds: {}", seeds.len());
     for line in lines {
         if line.contains("map") {
             maps.push(vec![]);
@@ -70,7 +77,7 @@ fn collect_state(data: String) -> State {
     return State { seeds, maps };
 }
 
-pub fn part1() -> i64 {
+pub fn main() {
     let practice_data = fs::read_to_string("src/day5/example.txt").expect("Unable to read file");
 
     let state = collect_state(practice_data);
@@ -88,11 +95,7 @@ pub fn part1() -> i64 {
         })
     });
 
-    k.min().unwrap()
-}
-
-pub fn main() {
-    let total_2 = part1();
+    let total_2 = k.min().unwrap();
 
     println!("minimum: {}", total_2);
 }
