@@ -1,32 +1,22 @@
 use itertools::Itertools;
-use std::{collections::HashMap, fs, vec};
+use std::{fs, ops::Range, vec};
 
+type Rng = Range<u64>;
 struct Map {
-    dest: i64,
-    src: i64,
-    length: i64,
+    dest_range: Rng,
+    src_range: Rng,
 }
 
 type Maps = Vec<Vec<Map>>;
-type Maps2 = Vec<HashMap<i64, i64>>;
-type Seeds = Vec<i64>;
+type Ranges = Vec<Rng>;
+
+type Seeds = Ranges;
 struct State {
     seeds: Seeds,
     maps: Maps,
-    maps2: Maps2,
 }
 
-fn collect_seeds_part_1(seed_line: &str) -> Seeds {
-    seed_line
-        .split_once(':')
-        .unwrap()
-        .1
-        .split_whitespace()
-        .map(|x| x.parse::<i64>().unwrap())
-        .collect::<Vec<_>>()
-}
-
-fn collect_seeds_part_2(seed_line: &str) -> Seeds {
+fn collect_seeds_ranges(seed_line: &str) -> Seeds {
     let binding = seed_line
         .split_once(':')
         .unwrap()
@@ -35,12 +25,8 @@ fn collect_seeds_part_2(seed_line: &str) -> Seeds {
         .map(|x| x.parse().unwrap())
         .collect_vec();
 
-    // println!("binding: {:?}", binding);
     let mut vec: Seeds = vec![];
-    binding.chunks(2).for_each(|w| {
-        // println!("w: {:?}", w);
-        vec.append(&mut (w[0]..w[0] + w[1]).collect_vec())
-    });
+    binding.chunks(2).for_each(|w| vec.push(w[0]..w[0] + w[1]));
 
     // println!("Seeds found: {:?}", vec.clone());
 
@@ -53,66 +39,122 @@ fn collect_state(data: String) -> State {
     let mut lines = data.lines();
 
     let mut maps: Maps = vec![];
-    let mut maps2: Maps2 = vec![];
 
     println!("collecting seeds");
-    let seeds = collect_seeds_part_2(lines.next().unwrap());
+    let seeds = collect_seeds_ranges(lines.next().unwrap());
 
     // println!("total seeds: {}", seeds.len());
     // seeds = seeds.iter().unique().collect_vec();
-    println!("unique seeds: {}", seeds.len());
+    println!("seeds: {:?}", seeds);
     for line in lines {
         if line.contains("map") {
-            // println!("found map");
-            maps2.push(HashMap::new());
             maps.push(vec![]);
         } else if line.matches(char::is_numeric).count() > 0 {
-            let mut line_data = line.split_whitespace().map(|x| x.parse::<i64>().unwrap());
+            let mut line_data = line.split_whitespace().map(|x| x.parse::<u64>().unwrap());
 
             let dest = line_data.next().unwrap();
             let src = line_data.next().unwrap();
             let length = line_data.next().unwrap();
-            let map = Map { dest, length, src };
+            let map = Map {
+                dest_range: (dest..dest + length),
+                src_range: (src..src + length),
+            };
 
             // println!("map: {}, {}, {}", map.dest, map.length, map.src);
             maps.last_mut().unwrap().push(map);
-
-            // let hash_map = &mut maps2.last_mut().unwrap();
-
-            // println!("inserting {} -> {}. {}", src, dest, length);
-            // for i in 0..0 + length {
-            //     hash_map.insert(src + i, dest + i);
-            // }
         }
     }
 
-    return State { seeds, maps2, maps };
+    return State { seeds, maps };
 }
 
 pub fn main() {
     let practice_data = fs::read_to_string("src/day5/example.txt").expect("Unable to read file");
+    let mut state = collect_state(practice_data);
 
-    let state = collect_state(practice_data);
+    for map in &mut state.maps {
+        // println!("=====================");
+        map.sort_by(|a, b| {
+            let b_start = b.src_range.start;
+            a.src_range.start.cmp(&b_start)
+        });
+    }
 
-    let k = state.seeds.iter().map(|seed| {
-        // let mut v = seed;
-        // for map in state.maps2.iter() {
-        //     v = map.get(v).unwrap_or(v);
-        // }
-        // v
-        state.maps.as_slice().iter().fold(*seed, |acc, maps| {
-            let found_map = maps
-                .iter()
-                .find(|m| acc >= m.src && acc <= (m.src + m.length));
+    let output = move_ranges(state.seeds, vec![], state.maps.pop().unwrap(), state.maps);
 
-            match found_map {
-                Some(map) => map.dest + (acc - &map.src),
-                None => acc,
+    println!("output: {}", output);
+}
+
+fn move_ranges(
+    mut ranges: Ranges,
+    mut next_ranges: Ranges,
+    curr_maps: Vec<Map>,
+    mut tail: Maps,
+) -> u64 {
+    println!("=========");
+    println!("=========");
+    println!("RUNNING");
+    println!("ranges: {:?}", ranges);
+    println!("next_ranges: {:?}", next_ranges);
+
+    match ranges[..] {
+        [] => match (next_ranges.as_slice(), tail.pop()) {
+            (_, Some(new_maps)) => {
+                println!("moving to next ranges");
+                move_ranges(next_ranges, vec![], new_maps, tail)
             }
-        })
-    });
+            (_, _) => {
+                println!("base case! {:?} {:?}", ranges, next_ranges);
+                next_ranges.iter().map(|k| k.start).min().unwrap()
+            }
+        },
 
-    let total_2 = k.min().unwrap();
+        _ => {
+            let range = ranges.pop().unwrap();
+            println!("processing range {:?}", range);
+            for m in &curr_maps {
+                println!("in maps: {:?} --> {:?}", m.src_range, m.dest_range);
+            }
 
-    println!("minimum: {}", total_2);
+            let _found = curr_maps.iter().find(|m| {
+                let item = m.src_range.end - 1;
+                range.contains(&m.src_range.start) || range.contains(&item)
+            });
+
+            match _found {
+                Some(Map {
+                    dest_range,
+                    src_range,
+                }) => {
+                    println!("found: {:?}", src_range);
+
+                    let overlap = src_range.start.max(range.start)..src_range.end.min(range.end);
+                    let pre_range = range.start..overlap.start;
+                    let post_range = overlap.end..range.end;
+
+                    let dist = overlap.start - src_range.start;
+                    let mapped_overlap =
+                        dest_range.start + dist..dest_range.start + dist + overlap.count() as u64;
+
+                    if !mapped_overlap.is_empty() {
+                        println!("mapped_overlap: {:?}", mapped_overlap);
+                        next_ranges.push(mapped_overlap);
+                    }
+                    if !pre_range.is_empty() {
+                        println!("adding pre_range: {:?}", pre_range);
+                        ranges.push(pre_range);
+                    }
+
+                    if !post_range.is_empty() {
+                        println!("adding post_range: {:?}", post_range);
+                        ranges.push(post_range);
+                    }
+                }
+                None => {
+                    next_ranges.push(range);
+                }
+            }
+            move_ranges(ranges, next_ranges, curr_maps, tail)
+        }
+    }
 }
