@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fs, slice::SliceIndex};
+use std::{cmp::Ordering, fs};
 
 use itertools::Itertools;
 
@@ -27,22 +27,11 @@ fn compare_two_cards(c1: &char, c2: &char) -> Ordering {
  * otherwise, continue with the third card in each hand, then the fourth, then the fifth.
  */
 fn compare_two_hands(Hand { hand: h1, .. }: &Hand, Hand { hand: h2, .. }: &Hand) -> Ordering {
-    // println!("comparing {} with {}", h1, h2);
-
-    let sort = h1
-        .chars()
+    h1.chars()
         .zip(h2.chars())
-        .map(|(c1, c2)| {
-            let compare_two_cards = compare_two_cards(&c1, &c2);
-            // println!("{} VS {}: {:?}", c1, c2, compare_two_cards);
-            compare_two_cards
-        })
+        .map(|(c1, c2)| compare_two_cards(&c1, &c2))
         .find(|o| !o.is_eq())
-        .unwrap_or(Ordering::Equal);
-
-    // println!("{} VS {}: {:?}", h1, h2, sort);
-
-    sort
+        .unwrap_or(Ordering::Equal)
 }
 
 pub fn main() {
@@ -64,7 +53,6 @@ pub fn main() {
 
     data.lines().for_each(|l| {
         let (card, score) = l.split_once(' ').unwrap();
-        // println!("card: {}, score: {}", card, score);
 
         let mut groups = card
             .chars()
@@ -79,28 +67,9 @@ pub fn main() {
             .unwrap_or((0, 'J'))
             .0;
 
-        // for g in groups.clone() {
-        //     println!("group: {}, {}", g.0, g.1)
-        // }
-
         let highest = groups.next().unwrap();
         let second_highest = groups.next().unwrap_or((0, 'Z'));
         let third_highest = groups.next().unwrap_or((0, 'Z'));
-
-        let should_not_use_jokers = highest.1 == 'J';
-
-        println!(
-            "{}-{}. {}-{}. {}: {}",
-            highest.0, highest.1, second_highest.0, second_highest.1, jokers, should_not_use_jokers
-        );
-
-        let v1 = highest.0 + if should_not_use_jokers { 0 } else { jokers };
-        let v2 = if second_highest.1 == 'J' {
-            0
-        } else {
-            second_highest.0
-        };
-        println!("{} -- {} ", v1, v2);
 
         let (n1, n2) = match (highest, second_highest, jokers) {
             ((h, 'J'), (s, _), _) => (h + s, third_highest.0),
@@ -120,8 +89,6 @@ pub fn main() {
             (_, _) => 6,
         };
 
-        println!("card: {}: #{}", card, vec_idx);
-
         types
             .get_mut(vec_idx)
             .unwrap()
@@ -133,25 +100,12 @@ pub fn main() {
         f.reverse()
     });
 
-    // for t in &types {
-    //     println!("---type---");
-
-    //     for h in t {
-    //         println!("{} = {}", h.hand, h.score)
-    //     }
-    // }
-
     let total = types
         .iter()
         .flatten()
         .rev()
         .enumerate()
-        .map(|(i, c)| {
-            let score = c.score.parse::<i64>().unwrap();
-            let m = (i as i64 + 1);
-            // println!("{} * {}", score, m);
-            score * m
-        })
+        .map(|(i, c)| c.score.parse::<i64>().unwrap() * (i as i64 + 1))
         .sum::<i64>();
 
     println!("TOTAL: {}", total);
